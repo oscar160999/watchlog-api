@@ -1,9 +1,7 @@
-"""Modelo para series disponibles en el catalogo."""
+"""Modelo para series disponibles en el catálogo."""
 
 from __future__ import annotations
-
 from datetime import datetime
-
 from src.extensions import db
 
 
@@ -12,26 +10,38 @@ class Series(db.Model):
 
     __tablename__ = "series"
 
-    # TODO: definir columnas (id, title, total_seasons, created_at, updated_at).
-    # TODO: agregar columnas opcionales (synopsis, genres, image_url) si se desean.
+    # Columnas principales
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(120), nullable=False)
+    total_seasons = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # TODO: configurar relacion con Season (one-to-many) y WatchEntry.
-    # seasons = db.relationship("Season", back_populates="series", lazy="joined")
+    # Columnas opcionales
+    synopsis = db.Column(db.Text, nullable=True)
+    genres = db.Column(db.String(100), nullable=True)
+    image_url = db.Column(db.String(255), nullable=True)
+
+    # Relaciones
+    seasons = db.relationship("Season", back_populates="series", cascade="all, delete-orphan", lazy="joined")
+    watch_entries = db.relationship("WatchEntry", backref="series", lazy=True)
 
     def __repr__(self) -> str:
-        """Devuelve una representacion legible del modelo."""
-        return f"<Series id={getattr(self, 'id', None)} title={getattr(self, 'title', None)}>"
+        """Devuelve una representación legible del modelo."""
+        return f"<Series id={self.id} title='{self.title}'>"
 
     def to_dict(self, include_seasons: bool = False) -> dict:
         """Serializa la serie y opcionalmente sus temporadas."""
-        # TODO: reemplazar por serializacion real usando marshmallow o similar.
         data = {
-            "id": getattr(self, "id", None),
-            "title": getattr(self, "title", None),
-            "total_seasons": getattr(self, "total_seasons", None),
-            "created_at": getattr(self, "created_at", datetime.utcnow()),
+            "id": self.id,
+            "title": self.title,
+            "total_seasons": self.total_seasons,
+            "synopsis": self.synopsis,
+            "genres": self.genres,
+            "image_url": self.image_url,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
         if include_seasons:
-            # TODO: serializar temporadas reales en lugar de lista vacia.
-            data["seasons"] = []
+            data["seasons"] = [season.to_dict() for season in self.seasons]
         return data
