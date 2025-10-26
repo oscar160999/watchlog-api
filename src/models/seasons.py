@@ -1,7 +1,6 @@
 """Modelo que representa una temporada de una serie."""
 
 from __future__ import annotations
-
 from src.extensions import db
 
 
@@ -10,18 +9,29 @@ class Season(db.Model):
 
     __tablename__ = "seasons"
 
-    # TODO: definir columnas (id, series_id, number, episodes_count).
-    # TODO: establecer restriccion unica por (series_id, number).
+    # Columnas principales
+    id = db.Column(db.Integer, primary_key=True)
+    series_id = db.Column(db.Integer, db.ForeignKey("series.id"), nullable=False)
+    number = db.Column(db.Integer, nullable=False)
+    episodes_count = db.Column(db.Integer, nullable=False)
 
-    # TODO: configurar relacion back_populates con Series.
-    # series = db.relationship("Series", back_populates="seasons")
+    # Restricción única: una temporada por número dentro de una misma serie
+    __table_args__ = (
+        db.UniqueConstraint("series_id", "number", name="unique_series_season"),
+    )
+
+    # Relación con Series (bidireccional)
+    series = db.relationship("Series", back_populates="seasons")
+
+    def __repr__(self) -> str:
+        """Representación legible del modelo."""
+        return f"<Season id={self.id} series_id={self.series_id} number={self.number}>"
 
     def to_dict(self) -> dict:
         """Serializa la temporada en un diccionario."""
-        # TODO: reemplazar esta implementacion por la serializacion real.
         return {
-            "id": getattr(self, "id", None),
-            "series_id": getattr(self, "series_id", None),
-            "number": getattr(self, "number", None),
-            "episodes_count": getattr(self, "episodes_count", None),
+            "id": self.id,
+            "series_id": self.series_id,
+            "number": self.number,
+            "episodes_count": self.episodes_count,
         }
