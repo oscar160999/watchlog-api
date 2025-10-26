@@ -1,45 +1,62 @@
+
 """Modelo puente que guarda el progreso del usuario."""
 
 from __future__ import annotations
-
 from datetime import datetime
-
 from src.extensions import db
 
 
 class WatchEntry(db.Model):
-    """Relacion entre un usuario y un contenido (pelicula o serie)."""
+    """Relación entre un usuario y un contenido (película o serie)."""
 
     __tablename__ = "watch_entries"
 
-    # TODO: definir columnas basicas (id, user_id, content_type, content_id, status).
-    # TODO: agregar columnas de progreso (current_season, current_episode, watched_episodes, total_episodes).
-    # TODO: establecer claves foraneas hacia User, Movie y Series segun el tipo.
+    # Columnas básicas
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    content_type = db.Column(db.String(10), nullable=False)  # 'movie' o 'series'
+    content_id = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(20), default="in_progress")  # 'in_progress', 'completed', etc.
 
-    # TODO: modelar las relaciones back_populates con User, Movie y Series.
+    # Progreso
+    current_season = db.Column(db.Integer, nullable=True)
+    current_episode = db.Column(db.Integer, nullable=True)
+    watched_episodes = db.Column(db.Integer, default=0)
+    total_episodes = db.Column(db.Integer, default=1)
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relaciones condicionales
+    movie = db.relationship("Movie", primaryjoin="and_(WatchEntry.content_id==Movie.id, WatchEntry.content_type=='movie')", backref="watch_entries", viewonly=True)
+    series = db.relationship("Series", primaryjoin="and_(WatchEntry.content_id==Series.id, WatchEntry.content_type=='series')", backref="watch_entries", viewonly=True)
+    user = db.relationship("User", back_populates="watch_entries")
 
     def percentage_watched(self) -> float:
         """Calcula el porcentaje completado para el contenido asociado."""
-        # TODO: implementar calculo utilizando watched_episodes y total_episodes.
-        raise NotImplementedError("TODO: calcular porcentaje de avance real")
+        if self.total_episodes and self.total_episodes > 0:
+            return round((self.watched_episodes / self.total_episodes) * 100, 2)
+        return 0.0
 
     def mark_as_watched(self) -> None:
         """Marca el contenido como completado."""
-        # TODO: actualizar atributos y timestamps para reflejar el estado final.
-        pass
+        self.status = "completed"
+        self.watched_episodes = self.total_episodes
+        self.updated_at = datetime.utcnow()
 
     def to_dict(self) -> dict:
         """Serializa la entrada para respuestas JSON."""
-        # TODO: reemplazar con serializacion acorde al modelo final.
         return {
-            "id": getattr(self, "id", None),
-            "user_id": getattr(self, "user_id", None),
-            "content_type": getattr(self, "content_type", None),
-            "content_id": getattr(self, "content_id", None),
-            "status": getattr(self, "status", None),
-            "current_season": getattr(self, "current_season", None),
-            "current_episode": getattr(self, "current_episode", None),
-            "watched_episodes": getattr(self, "watched_episodes", None),
-            "total_episodes": getattr(self, "total_episodes", None),
-            "updated_at": getattr(self, "updated_at", datetime.utcnow()),
+            "id": self.id,
+            "user_id": self.user_id,
+            "content_type": self.content_type,
+            "content_id": self.content_id,
+            "status": self.status,
+            "current_season": self.current_season,
+            "current_episode": self.current_episode,
+            "watched_episodes": self.watched_episodes,
+            "total_episodes": self.total_episodes,
+            "percentage_watched": self.percentage_watched(),
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
